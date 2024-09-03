@@ -6,7 +6,7 @@ import java.io.IOException;
 
 public class Main {
     private static final String SERVER_URL = "https://cf-server.jsclub.dev";
-    private static final String GAME_ID = "168470";
+    private static final String GAME_ID = "174187";
     private static final String PLAYER_NAME = "MikuQueen";
 
 
@@ -20,7 +20,7 @@ public class Main {
                 GameMap gameMap = hero.getGameMap();
                 gameMap.updateOnUpdateMap(args[0]);
 
-
+                
             }
         };
 
