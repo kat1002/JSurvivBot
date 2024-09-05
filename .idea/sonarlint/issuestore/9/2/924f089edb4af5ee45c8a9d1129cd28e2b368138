@@ -1,10 +1,8 @@
 
 k
-java:S1604"(Make this anonymous inner class a lambda(½—ä8­»Øâ›2J$72155929-6718-49ce-8388-df86846e6963
-]
-java:S1220""Move this file to a named package.8êŞô¾›2J$96e76d92-70f1-40fd-81b2-7c3cd6ec9e28
-	java:S112F"FDefine and throw a dedicated exception instead of using a generic one.(Ò‚Òéüÿÿÿÿ8Ûá×â›2J$ce5b1d86-22a1-4a12-88ed-8030ee3a3e79
+java:S1604"(Make this anonymous inner class a lambda(½—ä8Úúäâ›2J$ddfc5ef5-cce0-468e-a195-df6fbfd7c229
+	java:S112E"FDefine and throw a dedicated exception instead of using a generic one.(Ò‚Òéüÿÿÿÿ8İúäâ›2J$6ffc573a-ac67-4f66-a8cd-677f8a52d283
 •
-java:S3776"RRefactor this method to reduce its Cognitive Complexity from 16 to the 15 allowed.(œû¿Ø8ñá×â›2J$6cf3837c-0952-4d26-8571-95877c8ec16a
-r	java:S1065"+Replace this use of System.out by a logger.(¥ÒÂÕùÿÿÿÿ8‡â×â›2J$97c11fe9-3c03-4a63-b921-6ae845f6f1b9
-r	java:S1066"+Replace this use of System.out by a logger.(„Çõşÿÿÿÿ8ˆâ×â›2J$422981ff-2580-4095-98ff-296520b38e20
+java:S3776"RRefactor this method to reduce its Cognitive Complexity from 16 to the 15 allowed.(œû¿Ø8âúäâ›2J$97bce5b5-fd58-4946-a293-8b522683c9a9
+r	java:S1064"+Replace this use of System.out by a logger.(¥ÒÂÕùÿÿÿÿ8éúäâ›2J$0939728b-f7c6-4c79-9016-a8fcba4341ea
+r	java:S1065"+Replace this use of System.out by a logger.(„Çõşÿÿÿÿ8êúäâ›2J$621c99f7-af26-4289-8779-cc77cfc480d5
