@@ -1,11 +1,15 @@
 public enum State {
-    FindLoot,
+    FindChest,
     FindHealth,
-    FindShield,
-    FindClosedRangedWeapon,
-    FindRangedWeapon,
-    CloseAttack,
-    RangedAttack,
+    FindArmor,
+    FindWeapon,
+    FindMelee,
+    FindGun,
+    FindThrowable,
+    Attack,
     Run,
-    Dead
+    Dead,
+    NeedHealing,
+    FindEnemy,
+    GetIntoSafeArea
 }
