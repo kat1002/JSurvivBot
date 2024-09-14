@@ -11,5 +11,6 @@ public enum State {
     Dead,
     NeedHealing,
     FindEnemy,
-    GetIntoSafeArea
+    GetIntoSafeArea,
+    BreakObstacle
 }

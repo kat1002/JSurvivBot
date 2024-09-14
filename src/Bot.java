@@ -4,6 +4,7 @@ import jsclub.codefest2024.sdk.algorithm.PathUtils;
 import jsclub.codefest2024.sdk.base.Node;
 import jsclub.codefest2024.sdk.model.GameMap;
 import jsclub.codefest2024.sdk.model.Inventory;
+import jsclub.codefest2024.sdk.model.enemies.Enemy;
 import jsclub.codefest2024.sdk.model.equipments.Armor;
 import jsclub.codefest2024.sdk.model.equipments.HealingItem;
 import jsclub.codefest2024.sdk.model.obstacles.Obstacle;
@@ -25,36 +26,41 @@ public class Bot {
     public Player player;
     private State currentState;
     public Player currentTarget;
+    public Node nearestTarget;
     public Node currentItemTarget;
     public Node currentPosition;
 
 
     public GameMap gameMap;
     public List<Player> otherPlayers;
+    public List<Node> chests;
     public List<Obstacle> restricedList;
     public List<Node> restrictedNodes;
     public List<Node> otherPlayesPosition;
 
-    public Bot(String GameId, String PlayerName) {
-        hero = new Hero(GameId, PlayerName);
+    public Bot(String GameId, String PlayerName, String Key) {
+        hero = new Hero(GameId, PlayerName, Key);
         restrictedNodes = new ArrayList<>();
         otherPlayesPosition = new ArrayList<>();
+        chests = new ArrayList<>();
     }
 
     public static Bot GetInstance() {
         if (Instance == null) {
-            Instance = new Bot(BotInfo.GAME_ID, BotInfo.PLAYER_NAME);
+            Instance = new Bot(BotInfo.GAME_ID, BotInfo.PLAYER_NAME, BotInfo.PLAYER_KEY);
         }
         return Instance;
     }
 
 //region Method
     public void InitData() {
+        chests.clear();
         player = gameMap.getCurrentPlayer();
         otherPlayers = gameMap.getOtherPlayerInfo();
         restricedList = gameMap.getListIndestructibleObstacles();
-        restricedList.addAll(gameMap.getListChests());
+        chests.addAll(gameMap.getListChests());
         restricedList.addAll(gameMap.getListTraps());
+        if(currentState != State.FindChest) restricedList.addAll(gameMap.getListChests());
         restrictedNodes.clear();
         otherPlayesPosition.clear();
 
@@ -67,6 +73,26 @@ public class Bot {
         }
         for (Obstacle o : restricedList) {
             restrictedNodes.add(new Node(o.getX(), o.getY()));
+        }
+
+        for (Enemy e : gameMap.getListEnemies()) {
+            int enemyX = e.getX();
+            int enemyY = e.getY();
+
+            // Add enemy's position
+            restrictedNodes.add(new Node(enemyX, enemyY));
+
+            // Add surrounding positions (top, bottom, left, right)
+            restrictedNodes.add(new Node(enemyX - 1, enemyY)); // Left
+            restrictedNodes.add(new Node(enemyX + 1, enemyY)); // Right
+            restrictedNodes.add(new Node(enemyX, enemyY - 1)); // Down
+            restrictedNodes.add(new Node(enemyX, enemyY + 1)); // Up
+
+            // Optionally, add diagonal positions for a full surrounding
+            restrictedNodes.add(new Node(enemyX - 1, enemyY - 1)); // Bottom-left
+            restrictedNodes.add(new Node(enemyX + 1, enemyY - 1)); // Bottom-right
+            restrictedNodes.add(new Node(enemyX - 1, enemyY + 1)); // Top-left
+            restrictedNodes.add(new Node(enemyX + 1, enemyY + 1)); // Top-right
         }
     }
 
@@ -82,12 +108,20 @@ public class Bot {
         hero.start(BotInfo.SERVER_URL);
     }
 
-    private String GetDirection(){
-        if(currentPosition.getX() > currentTarget.getX()) return "r";
-        if(currentPosition.getX() < currentTarget.getX()) return "l";
-        if(currentPosition.getY() > currentTarget.getY()) return "d";
-        if(currentPosition.getY() < currentTarget.getY()) return "u";
+    private String GetDirection() {
+        if (currentPosition.getX() != currentTarget.getX()) {
+            // Move left if the target is to the left
+            if (currentPosition.getX() > currentTarget.getX()) return "l";
+            // Move right if the target is to the right
+            if (currentPosition.getX() < currentTarget.getX()) return "r";
+        } else if (currentPosition.getY() != currentTarget.getY()) {
+            // Move down if the target is below
+            if (currentPosition.getY() > currentTarget.getY()) return "d";
+            // Move up if the target is above
+            if (currentPosition.getY() < currentTarget.getY()) return "u";
+        }
 
+        // If the target is at the same position as the bot, or no valid direction found
         return "";
     }
 
@@ -146,9 +180,11 @@ public class Bot {
 
             System.out.println("Current State: " + currentState);
             System.out.println("HP: " + player.getHp());
+            System.out.println("Player pos : " + player.x + ", " + player.y);
+            System.out.println("Player : " + player + " \n");
 
-            System.out.println(gameMap.getCurrentPlayer());
-            System.out.println(gameMap.getOtherPlayerInfo());
+            //System.out.println(gameMap.getCurrentPlayer());
+            //System.out.println(gameMap.getOtherPlayerInfo());
 
             RunLogic();
         } catch (IOException e) {
@@ -157,19 +193,18 @@ public class Bot {
     }
 
 //region Bot Logic
+
     private void RunLogic() throws IOException {
         Inventory inventory = hero.getInventory();
-        //if(currentBaseState.equals(BaseState.Prepare)) restrictedNodes.addAll(otherPlayesPosition);
 
-        if(currentTarget != null && !currentTarget.getIsAlive())
-            currentTarget = FindNearestEnemy();
+        //if(hasWeapon)
 
-        System.out.println(currentTarget);
+        System.out.println("Inventory: "
+                    + "\nGun: " + inventory.getGun() + " " + (inventory.getGun() == null  && gameMap.getAllGun().size() > 0)
+                    + "\nMelee: " + inventory.getMelee() + " " + (inventory.getMelee().getId().equals("HAND") && gameMap.getAllMelee().size() > 0)
+                    + "\nThrowable: " + inventory.getThrowable() + " " + (inventory.getThrowable() == null  && gameMap.getAllThrowable().size() > 0));
 
-//        System.out.println("Inventory: "
-//                            + "\nGun: " + inventory.getGun() + " " + (inventory.getGun() == null  && gameMap.getAllGun().size() > 0)
-//                            + "\nMelee: " + inventory.getMelee() + " " + (inventory.getMelee().getId().equals("HAND") && gameMap.getAllMelee().size() > 0)
-//                            + "\nThrowable: " + inventory.getThrowable() + " " + (inventory.getThrowable() == null  && gameMap.getAllThrowable().size() > 0));
+        if(inventory.getGun() != null) System.out.println("Gun range: " + inventory.getGun().getRange());
 
 //        System.out.println("GameMap: "
 //                            + "\nGun List Size: " + gameMap.getAllGun().size()
@@ -178,14 +213,47 @@ public class Bot {
 //                            + "\nArmor List Size: " + gameMap.getListArmors().size()
 //                            + "\nHealth List Size: " + gameMap.getListHealingItems().size());
 
-        if(inventory.getListArmor().size() <= 0 && gameMap.getListArmors().size() > 0) currentState = State.FindArmor;
-        else if ((inventory.getListHealingItem().size() <= 0 || inventory.getListHealingItem().size() < 4) && gameMap.getListHealingItems().size() > 0) currentState = State.FindHealth;
-        else if (inventory.getMelee().getId().equals("HAND") && gameMap.getAllMelee().size() > 0) currentState = State.FindMelee;
-        else if (inventory.getGun() == null  && gameMap.getAllGun().size() > 0) currentState = State.FindGun;
-        else if (inventory.getThrowable() == null && gameMap.getAllThrowable().size() > 0) currentState = State.FindThrowable;
-        else if (inventory.getMelee().getId().equals("HAND") && gameMap.getAllMelee().size() > 0) currentState = State.FindMelee;
-        else currentState = State.FindEnemy;
+        //System.out.println("Other player : " + otherPlayers);
 
+        currentTarget = FindNearestEnemy();
+        if (currentTarget == null || !currentTarget.getIsAlive()) {
+            currentTarget = FindNearestEnemy();
+        }
+
+        System.out.println(currentTarget);
+
+        if (currentState != State.Attack) {
+
+            // Prioritize finding weapons (guns, melee, throwable) first
+            if (inventory.getGun() == null && !gameMap.getAllGun().isEmpty()) {
+                currentState = State.FindGun;
+            } else if (inventory.getMelee() != null && inventory.getMelee().getId().equals("HAND") && !gameMap.getAllMelee().isEmpty()) {
+                currentState = State.FindMelee;
+            } else if (inventory.getThrowable() == null && !gameMap.getAllThrowable().isEmpty()) {
+                currentState = State.FindThrowable;
+            }
+//            else if (!gameMap.getListChests().isEmpty()) {
+//                currentState = State.FindChest;  // After finding weapons, prioritize chests to get additional loot
+//            }
+
+            // After weapons and chests are found, check for health and armor
+            else if (inventory.getListArmor().isEmpty() && !gameMap.getListArmors().isEmpty()) {
+                currentState = State.FindArmor;
+            } else if ((inventory.getListHealingItem().isEmpty() || inventory.getListHealingItem().size() < 4) && !gameMap.getListHealingItems().isEmpty()) {
+                currentState = State.FindHealth;
+            }
+
+            // If everything is collected, go after enemies
+            else if (currentTarget != null && currentTarget.getIsAlive()) {
+                currentState = State.FindEnemy;
+            } else {
+                currentState = State.FindEnemy;  // Default to finding the nearest enemy if no items need looting
+            }
+        }
+
+
+
+        // Perform the action based on the current state
         Action(inventory);
     }
 
@@ -198,47 +266,138 @@ public class Bot {
             case FindWeapon:
             case FindHealth:
             case FindArmor:
-            case FindChest:
             case FindGun:
             case FindThrowable:
             case FindMelee:
                 hero.move(GetItemPath());
-                if(SamePosition(currentPosition, currentItemTarget))
+                if(SamePosition(currentPosition, currentItemTarget)) {
                     hero.pickupItem();
+                }
                 break;
+            case FindChest:
             case FindEnemy:
+                // Move towards the enemy
                 hero.move(PathUtils.getShortestPath(gameMap, restrictedNodes, currentPosition, currentTarget, true));
-                break;
-            case NeedHealing:
-                Heal();
+                if (inventory.getGun() != null && MathHandler.Distance(currentPosition, currentTarget) <= inventory.getGun().getRange()) {
+                    currentState = State.Attack;
+                } else if (inventory.getMelee() != null && MathHandler.Distance(currentPosition, currentTarget) <= inventory.getMelee().getRange()) {
+                    currentState = State.Attack;
+                } else if (inventory.getThrowable() != null && MathHandler.Distance(currentPosition, currentTarget) <= inventory.getThrowable().getRange()) {
+                    currentState = State.Attack;
+                }
                 break;
             case Attack:
-                PerformAttack();
+                PerformAttack();  // Attack the enemy if in range
+                break;
+            case NeedHealing:
+                Heal();  // Heal if necessary
+                break;
         }
     }
 
     private void PerformAttack() throws IOException {
+        // Calculate the distance between the bot and the current target
+        double distanceToEnemy = MathHandler.Distance(currentPosition, currentTarget);
 
-        if(MathHandler.Distance(currentPosition, currentTarget) >= 2 && MathHandler.Distance(currentPosition, currentTarget) <= hero.getInventory().getGun().getRange()){
-            if(hero.getInventory().getGun() != null){
-                if(player.getBulletNum() > 0) hero.shoot(GetDirection());
-                else hero.revokeItem(hero.getInventory().getGun().getId());
-                return;
-            }
-            if(hero.getInventory().getThrowable() != null){
-                hero.throwItem(GetDirection());
-                return;
-            }
+        System.out.println("Perform Attack");
 
-            hero.move(PathUtils.getShortestPath(gameMap, restrictedNodes, currentPosition, currentTarget, true));
-        }
-        else{
+        if(GetDirection().isEmpty()) hero.move(PathUtils.getShortestPath(gameMap, restrictedNodes, currentPosition, currentTarget, true));
+
+
+        // If the bot has a melee weapon and the enemy is within melee range
+        if (hero.getInventory().getMelee() != null && distanceToEnemy <= hero.getInventory().getMelee().getRange()) {
             hero.attack(GetDirection());
+            return;
+        }
+
+        // If the bot has a gun and the enemy is within gun range
+        if (hero.getInventory().getGun() != null && distanceToEnemy <= hero.getInventory().getGun().getRange()) {
+            if (hero.getInventory().getGun().getCapacity() > 0) {
+                System.out.println("Shoot");
+                hero.shoot(GetDirection());
+            } else {
+                // If no bullets, remove the gun and switch to another weapon
+                System.out.println("Throwgun");
+                hero.revokeItem(hero.getInventory().getGun().getId());
+            }
+            return;
+        }
+
+        // If the bot has a throwable and the enemy is within throwable range
+        if (hero.getInventory().getThrowable() != null && distanceToEnemy <= hero.getInventory().getThrowable().getRange()) {
+            hero.throwItem(GetDirection());
+            return;
+        }
+
+        // If no weapons are available, decide next action
+        if (hero.getInventory().getGun() == null && hero.getInventory().getMelee() == null && hero.getInventory().getThrowable() == null) {
+            // If no weapons are available, find the nearest weapon
+            currentState = State.FindWeapon;  // Switch to FindWeapon state
+            return;
+        }
+
+        System.out.println(currentTarget);
+
+        // If enemy is out of range for any attack, move closer to the enemy
+        hero.move(PathUtils.getShortestPath(gameMap, restrictedNodes, currentPosition, currentTarget, true));
+
+        // After moving, recheck if the bot is now in attack range for the next cycle
+        if (MathHandler.Distance(currentPosition, currentTarget) <= hero.getInventory().getGun().getRange() && currentTarget.getIsAlive()) {
+            currentState = State.Attack;
+        } else {
+            currentState = null;
         }
     }
 
+    private void BreakObstacle(Obstacle b) throws IOException {
+        // Calculate the distance between the bot and the current target
+        double distanceToEnemy = MathHandler.Distance(currentPosition, b);
+
+        System.out.println("Perform Attack");
+
+        if(GetDirection().isEmpty()) hero.move(PathUtils.getShortestPath(gameMap, restrictedNodes, currentPosition, b, true));
+
+
+        // If the bot has a melee weapon and the enemy is within melee range
+        if (hero.getInventory().getMelee() != null && distanceToEnemy <= hero.getInventory().getMelee().getRange()) {
+            hero.attack(GetDirection());
+            return;
+        }
+
+        // If the bot has a gun and the enemy is within gun range
+        if (hero.getInventory().getGun() != null && distanceToEnemy <= hero.getInventory().getGun().getRange()) {
+            if (hero.getInventory().getGun().getCapacity() > 0) {
+                System.out.println("Shoot");
+                hero.shoot(GetDirection());
+            } else {
+                // If no bullets, remove the gun and switch to another weapon
+                System.out.println("Throwgun");
+                hero.revokeItem(hero.getInventory().getGun().getId());
+            }
+            return;
+        }
+
+        // If the bot has a throwable and the enemy is within throwable range
+        if (hero.getInventory().getThrowable() != null && distanceToEnemy <= hero.getInventory().getThrowable().getRange()) {
+            hero.throwItem(GetDirection());
+            return;
+        }
+
+        // If enemy is out of range for any attack, move closer to the enemy
+        hero.move(PathUtils.getShortestPath(gameMap, restrictedNodes, currentPosition, b, true));
+
+        // After moving, recheck if the bot is now in attack range for the next cycle
+        if (MathHandler.Distance(currentPosition, b) <= hero.getInventory().getGun().getRange()) {
+            currentState = State.BreakObstacle;
+        } else {
+            currentState = null;
+        }
+    }
+
+
+
     private void Heal() throws IOException {
-        if(hero.getInventory().getListHealingItem().size() > 0){
+        if(!hero.getInventory().getListHealingItem().isEmpty()){
             hero.useItem(hero.getInventory()
                     .getListHealingItem()
                     .getFirst()
@@ -268,14 +427,19 @@ public class Bot {
     private Player FindNearestEnemy() {
         Player res = null;
         double distance;
-        double dis = Double.MAX_VALUE;
+        double dis = 1000000;
+
+        //System.out.println("Find enemy: " + otherPlayers);
 
         for (Player p : otherPlayers) {
             distance = MathHandler.Distance(currentPosition, p);
-            System.out.println();
-            if (dis > distance && MathHandler.IsInSafeArea(p)) {
+            //System.out.println(p + " " + distance);
+            //System.out.println(MathHandler.IsInSafeArea(p));
+            if (dis > distance && MathHandler.IsInSafeArea(p) && p.getIsAlive()) {
                 res = p;
                 dis = distance;
+
+                //System.out.println("asdfgasdg" + res);
             }
         }
 
@@ -290,7 +454,7 @@ public class Bot {
 
         for (HealingItem p : array) {
             distance = MathHandler.Distance(currentPosition, p);
-            if (dis > distance || MathHandler.IsInSafeArea(p)) {
+            if (dis > distance && MathHandler.IsInSafeArea(p)) {
                 res = p;
                 dis = distance;
             }
@@ -307,7 +471,7 @@ public class Bot {
 
         for (Armor p : array) {
             distance = MathHandler.Distance(currentPosition, p);
-            if (dis > distance || MathHandler.IsInSafeArea(p)) {
+            if (dis > distance && MathHandler.IsInSafeArea(p)) {
                 res = p;
                 dis = distance;
             }
@@ -324,7 +488,7 @@ public class Bot {
 
         for (Obstacle p : array) {
             distance = MathHandler.Distance(currentPosition, p);
-            if (dis > distance || MathHandler.IsInSafeArea(p)) {
+            if (dis > distance && MathHandler.IsInSafeArea(p)) {
                 res = p;
                 dis = distance;
             }
@@ -341,7 +505,7 @@ public class Bot {
 
         for (Weapon p : array) {
             distance = MathHandler.Distance(currentPosition, p);
-            if (dis > distance || MathHandler.IsInSafeArea(p)) {
+            if (dis > distance && MathHandler.IsInSafeArea(p)) {
                 res = p;
                 dis = distance;
             }
@@ -358,7 +522,7 @@ public class Bot {
 
         for (Weapon p : array) {
             distance = MathHandler.Distance(currentPosition, p);
-            if (dis > distance || MathHandler.IsInSafeArea(p)) {
+            if (dis > distance && MathHandler.IsInSafeArea(p)) {
                 res = p;
                 dis = distance;
             }
@@ -375,7 +539,7 @@ public class Bot {
 
         for (Weapon p : array) {
             distance = MathHandler.Distance(currentPosition, p);
-            if (dis > distance || MathHandler.IsInSafeArea(p)) {
+            if (dis > distance && MathHandler.IsInSafeArea(p)) {
                 res = p;
                 dis = distance;
             }
@@ -407,9 +571,43 @@ public class Bot {
             }
         }
 
+        System.out.println(res);
+
         return res;
     }
 
+    private Node GetNearestTarget() {
+        Node nearestChest = FindNearestChest();
+
+        if (nearestChest != null) {
+            // Compare distances and return the nearest target (either the current target or the nearest chest)
+            return (MathHandler.Distance(currentPosition, currentTarget) <= MathHandler.Distance(currentPosition, nearestChest))
+                    ? currentTarget
+                    : nearestChest;
+        }
+
+        // If no chest is found, return the current target as the default
+        return currentTarget;
+    }
+
+    private Node FindNearestChest(){
+        if(gameMap.getListChests().isEmpty()) return null;
+
+        Node res = null;
+        double distance;
+        double dis = Double.MAX_VALUE;
+        List<Obstacle> array = gameMap.getListChests();
+
+        for (Obstacle p : array) {
+            distance = MathHandler.Distance(currentPosition, p);
+            if (dis > distance && MathHandler.IsInSafeArea(p)) {
+                res = p;
+                dis = distance;
+            }
+        }
+
+        return res;
+    }
 
 //endregion
 

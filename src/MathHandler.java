@@ -1,4 +1,5 @@
 
+import jsclub.codefest2024.sdk.algorithm.PathUtils;
 import jsclub.codefest2024.sdk.base.Node;
 import jsclub.codefest2024.sdk.model.GameMap;
 import java.awt.Rectangle;
@@ -13,11 +14,6 @@ public class MathHandler {
     }
 
     public static boolean IsInSafeArea(Node a){
-        int safeAreaSize = Bot.GetInstance().MapSize - Bot.Instance.gameMap.getDarkAreaSize();
-
-        return ((a.getX() < safeAreaSize / 2) &&
-                (a.getY() < safeAreaSize / 2) &&
-                (a.getX() > -safeAreaSize / 2) &&
-                (a.getY() > -safeAreaSize / 2));
+        return PathUtils.checkInsideSafeArea(a, Bot.Instance.gameMap.getDarkAreaSize(), Bot.GetInstance().gameMap.getMapSize());
     }
 }
