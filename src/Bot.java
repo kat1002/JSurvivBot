@@ -61,6 +61,7 @@ public class Bot {
         chests.addAll(gameMap.getListChests());
         restricedList.addAll(gameMap.getListTraps());
         if(currentState != State.FindChest) restricedList.addAll(gameMap.getListChests());
+        if(currentState != State.FindEnemy) restrictedNodes.addAll(otherPlayers);
         restrictedNodes.clear();
         otherPlayesPosition.clear();
 
@@ -200,9 +201,9 @@ public class Bot {
         //if(hasWeapon)
 
         System.out.println("Inventory: "
-                    + "\nGun: " + inventory.getGun() + " " + (inventory.getGun() == null  && gameMap.getAllGun().size() > 0)
-                    + "\nMelee: " + inventory.getMelee() + " " + (inventory.getMelee().getId().equals("HAND") && gameMap.getAllMelee().size() > 0)
-                    + "\nThrowable: " + inventory.getThrowable() + " " + (inventory.getThrowable() == null  && gameMap.getAllThrowable().size() > 0));
+                    + "\nGun: " + inventory.getGun() + " " + (inventory.getGun() == null  && !gameMap.getAllGun().isEmpty())
+                    + "\nMelee: " + inventory.getMelee() + " " + (inventory.getMelee().getId().equals("HAND") && !gameMap.getAllMelee().isEmpty())
+                    + "\nThrowable: " + inventory.getThrowable() + " " + (inventory.getThrowable() == null  && !gameMap.getAllThrowable().isEmpty()));
 
         if(inventory.getGun() != null) System.out.println("Gun range: " + inventory.getGun().getRange());
 
@@ -239,9 +240,10 @@ public class Bot {
             // After weapons and chests are found, check for health and armor
             else if (inventory.getListArmor().isEmpty() && !gameMap.getListArmors().isEmpty()) {
                 currentState = State.FindArmor;
-            } else if ((inventory.getListHealingItem().isEmpty() || inventory.getListHealingItem().size() < 4) && !gameMap.getListHealingItems().isEmpty()) {
-                currentState = State.FindHealth;
             }
+//            else if ((inventory.getListHealingItem().isEmpty() && player.getHp() < 40) && !gameMap.getListHealingItems().isEmpty()) {
+//                currentState = State.FindHealth;
+//            }
 
             // If everything is collected, go after enemies
             else if (currentTarget != null && currentTarget.getIsAlive()) {
