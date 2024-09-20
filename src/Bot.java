@@ -38,6 +38,8 @@ public class Bot {
     public List<Node> restrictedNodes;
     public List<Node> otherPlayesPosition;
 
+    public boolean hasWeapon = false;
+
     public Bot(String GameId, String PlayerName, String Key) {
         hero = new Hero(GameId, PlayerName, Key);
         restrictedNodes = new ArrayList<>();
@@ -226,29 +228,22 @@ public class Bot {
         if (currentState != State.Attack) {
 
             // Prioritize finding weapons (guns, melee, throwable) first
-            if (inventory.getGun() == null && !gameMap.getAllGun().isEmpty()) {
-                currentState = State.FindGun;
-            } else if (inventory.getMelee() != null && inventory.getMelee().getId().equals("HAND") && !gameMap.getAllMelee().isEmpty()) {
+            if (inventory.getMelee() != null && inventory.getMelee().getId().equals("HAND") && !gameMap.getAllMelee().isEmpty()) {
                 currentState = State.FindMelee;
-            } else if (inventory.getThrowable() == null && !gameMap.getAllThrowable().isEmpty()) {
-                currentState = State.FindThrowable;
             }
 //            else if (!gameMap.getListChests().isEmpty()) {
 //                currentState = State.FindChest;  // After finding weapons, prioritize chests to get additional loot
 //            }
 
             // After weapons and chests are found, check for health and armor
-            else if (inventory.getListArmor().isEmpty() && !gameMap.getListArmors().isEmpty()) {
+            else if (inventory.getListArmor().isEmpty() && inventory.getListArmor().size() < 2 && !gameMap.getListArmors().isEmpty()) {
                 currentState = State.FindArmor;
             }
 //            else if ((inventory.getListHealingItem().isEmpty() && player.getHp() < 40) && !gameMap.getListHealingItems().isEmpty()) {
 //                currentState = State.FindHealth;
 //            }
 
-            // If everything is collected, go after enemies
-            else if (currentTarget != null && currentTarget.getIsAlive()) {
-                currentState = State.FindEnemy;
-            } else {
+            else {
                 currentState = State.FindEnemy;  // Default to finding the nearest enemy if no items need looting
             }
         }
@@ -268,12 +263,19 @@ public class Bot {
             case FindWeapon:
             case FindHealth:
             case FindArmor:
+                hero.move(GetItemPath());
+                if(SamePosition(currentPosition, currentItemTarget)) {
+                    hero.pickupItem();
+                }
+                break;
             case FindGun:
             case FindThrowable:
             case FindMelee:
                 hero.move(GetItemPath());
                 if(SamePosition(currentPosition, currentItemTarget)) {
                     hero.pickupItem();
+                    hasWeapon = true;
+                    currentState = State.Attack;
                 }
                 break;
             case FindChest:
